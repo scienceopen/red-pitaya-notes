@@ -25,6 +25,7 @@ int main(int argc, char *argv[])
   int16_t pulse[32768];
   uint64_t buffer[8192];
   int i, j, size, yes = 1;
+  int VERBOSE=1;
 
   if((fd = open("/dev/mem", O_RDWR)) < 0)
   {
@@ -105,6 +106,7 @@ int main(int argc, char *argv[])
           /* set rx phase increment */
           if(value < 0 || value > 60000000) continue;
           *rx_freq = (uint32_t)floor(value / 125.0e6 * (1<<30) + 0.5);
+          if (VERBOSE==1) printf("%d",value);
           break;
         case 1:
           /* set rx sample rate */

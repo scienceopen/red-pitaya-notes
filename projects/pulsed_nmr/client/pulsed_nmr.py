@@ -35,6 +35,8 @@ from PyQt5.QtNetwork import QAbstractSocket, QTcpSocket
 
 Ui_PulsedNMR, QMainWindow = loadUiType('pulsed_nmr.ui')
 
+VERBOSE=True
+
 class PulsedNMR(QMainWindow, Ui_PulsedNMR):
   rates = {0:25.0e3, 1:50.0e3, 2:250.0e3, 3:500.0e3, 4:2500.0e3}
   def __init__(self):
@@ -48,36 +50,36 @@ class PulsedNMR(QMainWindow, Ui_PulsedNMR):
     self.idle = True
     # number of samples to show on the plot
     self.size = 50000
-    # buffer and offset for the incoming samples
+    #%% buffer and offset for the incoming samples
     self.buffer = bytearray(8 * self.size)
     self.offset = 0
     self.data = np.frombuffer(self.buffer, np.complex64)
-    # create figure
+    #%% create figure
     figure = Figure()
     figure.set_facecolor('none')
     self.axes = figure.add_subplot(111)
     self.canvas = FigureCanvas(figure)
     self.plotLayout.addWidget(self.canvas)
-    # create navigation toolbar
+    #%% create navigation toolbar
     self.toolbar = NavigationToolbar(self.canvas, self.plotWidget, False)
-    # remove subplots action
+    #%% remove subplots action
     actions = self.toolbar.actions()
     self.toolbar.removeAction(actions[7])
     self.plotLayout.addWidget(self.toolbar)
-    # create TCP socket
+    #%% create TCP socket
     self.socket = QTcpSocket(self)
     self.socket.connected.connect(self.connected)
     self.socket.readyRead.connect(self.read_data)
     self.socket.error.connect(self.display_error)
-    # connect signals from buttons and boxes
+    #%% connect signals from buttons and boxes
     self.startButton.clicked.connect(self.start)
     self.freqValue.valueChanged.connect(self.set_freq)
     self.awidthValue.valueChanged.connect(self.set_awidth)
     self.deltaValue.valueChanged.connect(self.set_delta)
     self.rateValue.currentIndexChanged.connect(self.set_rate)
-    # set rate
+    #%% set rate
     self.rateValue.setCurrentIndex(2)
-    # create timer for the repetitions
+    #%% create timer for the repetitions
     self.timer = QTimer(self)
     self.timer.timeout.connect(self.fire)
 
@@ -89,11 +91,13 @@ class PulsedNMR(QMainWindow, Ui_PulsedNMR):
       self.idle = True
       self.timer.stop()
       self.socket.close()
+      print('disconnected')
       self.offset = 0
       self.startButton.setText('Start')
       self.startButton.setEnabled(True)
 
   def connected(self):
+    if VERBOSE: print('Connected')
     self.idle = False
     self.set_freq(self.freqValue.value())
     self.set_rate(self.rateValue.currentIndex())
@@ -111,7 +115,7 @@ class PulsedNMR(QMainWindow, Ui_PulsedNMR):
     else:
       self.buffer[self.offset:8 * self.size] = self.socket.read(8 * self.size - self.offset)
       self.offset = 0
-      # plot the signal envelope
+      #%% plot the signal envelope
       self.curve.set_ydata(np.abs(self.data))
       self.canvas.draw()
 
@@ -164,6 +168,7 @@ class PulsedNMR(QMainWindow, Ui_PulsedNMR):
 
   def fire(self):
     if self.idle: return
+    if VERBOSE: print('firing')
     self.socket.write(struct.pack('<I', 3<<28))
 
 app = QApplication(sys.argv)
